@@ -11,7 +11,7 @@
 
 Name:		eclipse-phpeclipse
 Version:	1.1.8
-Release:	%mkrel 16.4
+Release:	%mkrel 16.4.1
 Summary:	PHP Eclipse plugin
 
 Group:		Development/Java
