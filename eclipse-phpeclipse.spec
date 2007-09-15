@@ -11,7 +11,7 @@
 
 Name:		eclipse-phpeclipse
 Version:	1.1.8
-Release:	%mkrel 16.4.1
+Release:	%mkrel 16.4.2
 Summary:	PHP Eclipse plugin
 
 Group:		Development/Java
@@ -31,8 +31,6 @@ BuildRequires:  eclipse-pde
 %if %{gcj_support}
 BuildRequires:		gcc-java >= 0:4.0.2
 BuildRequires:		java-gcj-compat-devel >= 0:1.0.33
-Requires(post):		java-gcj-compat >= 0:1.0.33
-Requires(postun):	java-gcj-compat >= 0:1.0.33
 %else
 BuildRequires:		java-devel >= 0:1.4.2
 %endif
