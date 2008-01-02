@@ -25,6 +25,7 @@ Patch0:		%{name}-3.2-build.patch
 Patch1:		%{name}-rm-win32-help.patch
 Patch2:		%{name}-httpd-integration.patch
 
+BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root
 
 BuildRequires:  eclipse-pde
 %if %{gcj_support}
