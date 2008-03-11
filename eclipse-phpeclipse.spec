@@ -28,6 +28,7 @@ Patch2:		%{name}-httpd-integration.patch
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root
 
 BuildRequires:  eclipse-pde
+BuildRequires:  java-rpmbuild
 %if %{gcj_support}
 BuildRequires:		gcc-java >= 0:4.0.2
 BuildRequires:		java-gcj-compat-devel >= 0:1.0.33
