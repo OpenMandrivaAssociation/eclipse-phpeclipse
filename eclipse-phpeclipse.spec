@@ -11,10 +11,10 @@
 
 Name:		eclipse-phpeclipse
 Version:	1.1.8
-Release:	%mkrel 16.4.2
+Release:	%mkrel 16.4.3
 Summary:	PHP Eclipse plugin
 
-Group:		Development/Java
+Group:		Development/PHP
 License:	CPL
 URL:		http://phpeclipse.net/
 
