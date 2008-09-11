@@ -93,11 +93,11 @@ fi
 
 %build
 # build the main feature
-%{eclipse_base}/buildscripts/pdebuild -f net.sourceforge.phpeclipse.feature
+%{eclipse_base}/buildscripts/pdebuild -D -f net.sourceforge.phpeclipse.feature
 
 # build the debug features
-%{eclipse_base}/buildscripts/pdebuild -f net.sourceforge.phpeclipse.debug.feature
-%{eclipse_base}/buildscripts/pdebuild -f net.sourceforge.phpeclipse.xdebug.feature
+%{eclipse_base}/buildscripts/pdebuild -D -f net.sourceforge.phpeclipse.debug.feature
+%{eclipse_base}/buildscripts/pdebuild -D -f net.sourceforge.phpeclipse.xdebug.feature
 
 %install
 rm -rf %{buildroot}
