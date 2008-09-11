@@ -1,29 +1,28 @@
-%define fedora		1
-%define redhat		0
-%if %{fedora}
-%define gcj_support	1
-%else
-%define gcj_support	0
-%endif
-
-%define eclipse_name	eclipse
-%define eclipse_base	%{_datadir}/%{eclipse_name}
+%define eclipse_base     %{_libdir}/eclipse
+%define gcj_support      0
 
 Name:		eclipse-phpeclipse
-Version:	1.1.8
-Release:	%mkrel 4.4.3
+Version:	1.2.0
+Release:	%mkrel 0.2.svn1573.1
 Summary:	PHP Eclipse plugin
 
 Group:		Development/PHP
 License:	CPL
 URL:		http://phpeclipse.net/
 
-Source0:	phpeclipse-%{version}.tar.gz
-Source1:	make-phpeclipse-source-archive.sh
+# source tarball and the script used to generate it from upstream's source control
+# script usage:
+# $ sh get-phpeclipse.sh
+Source0:   phpeclipse-%{version}.tar.gz
+Source1:   get-phpeclipse.sh
 
-Patch0:		%{name}-3.2-build.patch
-Patch1:		%{name}-rm-win32-help.patch
-Patch2:		%{name}-httpd-integration.patch
+Patch0:    %{name}-broken-help-links.patch
+Patch1:    %{name}-fix-build-props.patch
+Patch2:    %{name}-httpd-integration.patch
+Patch3:    %{name}-no-htmlparser.patch
+Patch4:    %{name}-rm-win32-help.patch
+Patch5:    %{name}-external-parser.patch
+Patch6:    %{name}-external-preview.patch
 
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root
 
@@ -48,58 +47,72 @@ Requires: 		php
 Requires:		apache
 
 %description
-The PHPeclipse plugin allows developers to write PHP webpages and scripts in
-Eclipse. 
+PHPEclipse is an open source PHP IDE based on the Eclipse platform. Features
+supported include syntax highlighting, content assist, PHP manual integration,
+templates and support for the XDebug and DBG debuggers.
 
 %prep
-%setup -q -n phpeclipse-1.1.8
+%setup -q -n phpeclipse-%{version}
 
-pushd net.sourceforge.phpeclipse
+# apply patches
 %patch0 -p0
-popd 
-pushd net.sourceforge.phpeclipse.phphelp
 %patch1 -p0
-popd
-%patch2
+%patch2 -p0
+%patch3 -p0
+%patch4 -p0
+%patch5 -p0
+%patch6 -p0
 
-%{__sed} --in-place "s:/usr/share/eclipse:%{eclipse_base}:" net.sourceforge.phpeclipse.externaltools/prefs/default_linux.properties
-%{__sed} --in-place 's/\r//' net.sourceforge.phpeclipse.feature/cpl-v10.html
+# ditch bundled libs in favor of building against fedora packaged libs
+rm net.sourceforge.phpeclipse.phpmanual.htmlparser/sax2.jar \
+   net.sourceforge.phpeclipse.phpmanual.htmlparser/htmllexer.jar \
+   net.sourceforge.phpeclipse.phpmanual.htmlparser/filterbuilder.jar \
+   net.sourceforge.phpeclipse.phpmanual.htmlparser/thumbelina.jar \
+   net.sourceforge.phpeclipse.phpmanual.htmlparser/junit.jar \
+   net.sourceforge.phpeclipse.phpmanual.htmlparser/htmlparser.jar
+build-jar-repository -s -p net.sourceforge.phpeclipse.phpmanual.htmlparser xml-commons-apis
+
+# this is done in a patch instead
+#grep -lR sax2 * | xargs sed --in-place "s/sax2/xml-commons-apis/"
+
+# fix jar versions
+find -name MANIFEST.MF | xargs sed --in-place "s/0.0.0/%{version}/"
+
+# make sure upstream hasn't sneaked in any jars we don't know about
+JARS=""
+for j in `find -name "*.jar"`; do
+  if [ ! -L $j ]; then
+    JARS="$JARS $j"
+  fi
+done
+if [ ! -z "$JARS" ]; then
+   echo "These jars should be deleted and symlinked to system jars: $JARS"
+   exit 1
+fi
 
 %build
-# See comments in the script to understand this.
-/bin/sh -x %{eclipse_base}/buildscripts/copy-platform SDK %{eclipse_base}
-SDK=$(cd SDK > /dev/null && pwd)
+# build the main feature
+%{eclipse_base}/buildscripts/pdebuild -f net.sourceforge.phpeclipse.feature
 
-# Eclipse may try to write to the home directory.
-mkdir home
-homedir=$(cd home > /dev/null && pwd)
-
-# build the main phpeclipse feature
-#	TODO: convert this to an `eclipse` command
-%{java} -cp $SDK/startup.jar \
-	-Dosgi.sharedConfiguration.area=%{_libdir}/eclipse/configuration \
-	-Duser.home=$homedir \
-	org.eclipse.core.launcher.Main \
-	-application org.eclipse.ant.core.antRunner \
-	-DjavacFailOnError=true \
-	-DdontUnzip=true \
-	-Dtype=feature \
-	-Did=net.sourceforge.phpeclipse \
-	-DsourceDirectory=$(pwd) \
-	-DbaseLocation=$SDK \
-	-Dbuilder=%{eclipse_base}/plugins/org.eclipse.pde.build/templates/package-build \
-	-DdontFetchAnything=true \
-	-f %{eclipse_base}/plugins/org.eclipse.pde.build/scripts/build.xml
+# build the debug features
+%{eclipse_base}/buildscripts/pdebuild -f net.sourceforge.phpeclipse.debug.feature
+%{eclipse_base}/buildscripts/pdebuild -f net.sourceforge.phpeclipse.xdebug.feature
 
 %install
-rm -rf $RPM_BUILD_ROOT
-install -d -m 755 $RPM_BUILD_ROOT%{eclipse_base}
-unzip -q -d $RPM_BUILD_ROOT%{eclipse_base}/.. build/rpmBuild/net.sourceforge.phpeclipse.zip
-rm $RPM_BUILD_ROOT%{eclipse_base}/plugins/org.eclipse.pde.runtime*.jar
+rm -rf %{buildroot}
+install -d -m 755 %{buildroot}%{eclipse_base}
+unzip -q -d %{buildroot}%{eclipse_base}/.. build/rpmBuild/net.sourceforge.phpeclipse.feature.zip
+unzip -q -d %{buildroot}%{eclipse_base}/.. build/rpmBuild/net.sourceforge.phpeclipse.debug.feature.zip
+unzip -q -d %{buildroot}%{eclipse_base}/.. build/rpmBuild/net.sourceforge.phpeclipse.xdebug.feature.zip
 
-%if %{gcj_support}
-%{_bindir}/aot-compile-rpm
-%endif
+# need to recreate the symlinks to libraries that were setup in "prep"
+# because for some reason the ant copy task doesn't preserve them
+pushd %{buildroot}%{eclipse_base}/plugins/net.sourceforge.phpeclipse.phpmanual.htmlparser_*
+rm *.jar
+build-jar-repository -s -p . xml-commons-apis
+popd
+
+%{gcj_compile}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -114,22 +127,31 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc %{eclipse_base}/features/net.sourceforge.phpeclipse_%{version}/cpl-v10.html
-%{eclipse_base}/features/net.sourceforge.phpeclipse_*
-%{eclipse_base}/plugins/net.sourceforge.phpdt.smarty.ui_*
+%doc %{eclipse_base}/features/net.sourceforge.phpeclipse.feature_*/cpl-v10.html
+
+# main feature
+%{eclipse_base}/features/net.sourceforge.phpeclipse.feature_*
 %{eclipse_base}/plugins/net.sourceforge.phpeclipse_*
 %{eclipse_base}/plugins/net.sourceforge.phpeclipse.core_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.debug.core_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.debug.ui_*
 %{eclipse_base}/plugins/net.sourceforge.phpeclipse.externaltools_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.launching_*
+%{eclipse_base}/plugins/net.sourceforge.phpeclipse.help_*
 %{eclipse_base}/plugins/net.sourceforge.phpeclipse.phphelp_*
+%{eclipse_base}/plugins/net.sourceforge.phpeclipse.phpmanual_*
+%{eclipse_base}/plugins/net.sourceforge.phpeclipse.phpmanual.htmlparser_*
+%{eclipse_base}/plugins/net.sourceforge.phpeclipse.smarty.ui_*
 %{eclipse_base}/plugins/net.sourceforge.phpeclipse.ui_*
 %{eclipse_base}/plugins/net.sourceforge.phpeclipse.webbrowser_*
 %{eclipse_base}/plugins/net.sourceforge.phpeclipse.xml.core_*
 %{eclipse_base}/plugins/net.sourceforge.phpeclipse.xml.ui_*
-%if %{gcj_support}
-%{_libdir}/gcj/%{name}
-%endif
+
+# debug features
+%{eclipse_base}/features/net.sourceforge.phpeclipse.debug.feature_*
+%{eclipse_base}/plugins/net.sourceforge.phpeclipse.debug.core_*
+%{eclipse_base}/plugins/net.sourceforge.phpeclipse.debug.ui_*
+%{eclipse_base}/plugins/net.sourceforge.phpeclipse.launching_*
+%{eclipse_base}/features/net.sourceforge.phpeclipse.xdebug.feature_*
+%{eclipse_base}/plugins/net.sourceforge.phpeclipse.xdebug.core_*
+%{eclipse_base}/plugins/net.sourceforge.phpeclipse.xdebug.ui_*
+%{gcj_files}
 
 
