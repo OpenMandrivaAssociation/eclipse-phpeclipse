@@ -39,7 +39,7 @@ BuildRequires:		java-devel >= 0:1.4.2
 %if %{gcj_support}
 ExclusiveArch:		%{ix86} x86_64 ppc ia64
 %else
-BuildArch:		noarch
+#BuildArch:		noarch
 %endif
 
 Requires:		eclipse-platform >= 1:3.2.1
