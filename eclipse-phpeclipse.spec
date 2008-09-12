@@ -1,4 +1,5 @@
 %define eclipse_base     %{_libdir}/eclipse
+%define install_loc      %{_datadir}/eclipse/dropins
 %define gcj_support      0
 
 Name:		eclipse-phpeclipse
@@ -99,19 +100,23 @@ homedir=$(cd home > /dev/null & pwd)
 %{eclipse_base}/buildscripts/pdebuild -a -Duser.home=$homedir -D -f net.sourceforge.phpeclipse.feature
 
 # build the debug features
-%{eclipse_base}/buildscripts/pdebuild -a -Duser.home=$homedir -D -f net.sourceforge.phpeclipse.debug.feature
-%{eclipse_base}/buildscripts/pdebuild -a -Duser.home=$homedir -D -f net.sourceforge.phpeclipse.xdebug.feature
+%{eclipse_base}/buildscripts/pdebuild -a -Duser.home=$homedir -f net.sourceforge.phpeclipse.debug.feature
+%{eclipse_base}/buildscripts/pdebuild -a -Duser.home=$homedir -f net.sourceforge.phpeclipse.xdebug.feature
 
 %install
 rm -rf %{buildroot}
 install -d -m 755 %{buildroot}%{eclipse_base}
-unzip -q -d %{buildroot}%{eclipse_base}/.. build/rpmBuild/net.sourceforge.phpeclipse.feature.zip
-unzip -q -d %{buildroot}%{eclipse_base}/.. build/rpmBuild/net.sourceforge.phpeclipse.debug.feature.zip
-unzip -q -d %{buildroot}%{eclipse_base}/.. build/rpmBuild/net.sourceforge.phpeclipse.xdebug.feature.zip
+install -d -m 755 %{buildroot}%{install_loc}
+install -d -m 755 %{buildroot}%{install_loc}/phpeclipse
+install -d -m 755 %{buildroot}%{install_loc}/phpeclipse-debug
+install -d -m 755 %{buildroot}%{install_loc}/phpeclipse-xdebug
+unzip -q -d %{buildroot}%{install_loc}/phpeclipse build/rpmBuild/net.sourceforge.phpeclipse.feature.zip
+unzip -q -d %{buildroot}%{install_loc}/phpeclipse-debug build/rpmBuild/net.sourceforge.phpeclipse.debug.feature.zip
+unzip -q -d %{buildroot}%{install_loc}/phpeclipse-xdebug build/rpmBuild/net.sourceforge.phpeclipse.xdebug.feature.zip
 
 # need to recreate the symlinks to libraries that were setup in "prep"
 # because for some reason the ant copy task doesn't preserve them
-pushd %{buildroot}%{eclipse_base}/plugins/net.sourceforge.phpeclipse.phpmanual.htmlparser_*
+pushd %{buildroot}%{install_loc}/phpeclipse/eclipse/plugins/net.sourceforge.phpeclipse.phpmanual.htmlparser_*
 rm *.jar
 build-jar-repository -s -p . xml-commons-apis
 popd
@@ -131,31 +136,12 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc %{eclipse_base}/features/net.sourceforge.phpeclipse.feature_*/cpl-v10.html
-
 # main feature
-%{eclipse_base}/features/net.sourceforge.phpeclipse.feature_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.core_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.externaltools_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.help_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.phphelp_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.phpmanual_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.phpmanual.htmlparser_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.smarty.ui_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.ui_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.webbrowser_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.xml.core_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.xml.ui_*
+%{install_loc}/phpeclipse/*
 
 # debug features
-%{eclipse_base}/features/net.sourceforge.phpeclipse.debug.feature_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.debug.core_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.debug.ui_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.launching_*
-%{eclipse_base}/features/net.sourceforge.phpeclipse.xdebug.feature_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.xdebug.core_*
-%{eclipse_base}/plugins/net.sourceforge.phpeclipse.xdebug.ui_*
+%{install_loc}/phpeclipse-debug/*
+%{install_loc}/phpeclipse-xdebug/*
 %{gcj_files}
 
 
