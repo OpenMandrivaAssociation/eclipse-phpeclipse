@@ -3,8 +3,8 @@
 %define gcj_support      0
 
 Name:		eclipse-phpeclipse
-Version:	1.2.0
-Release:	%mkrel 0.2.svn1573.1
+Version:	1.2.1
+Release:	%mkrel 0.2.0
 Summary:	PHP Eclipse plugin
 
 Group:		Development/PHP
@@ -60,20 +60,20 @@ templates and support for the XDebug and DBG debuggers.
 # apply patches
 %patch0 -p0
 %patch1 -p0
-%patch2 -p0
-%patch3 -p0
+%patch2 -p4
+%patch3 -p4
 %patch4 -p0
 %patch5 -p0
 %patch6 -p0
 
 # ditch bundled libs in favor of building against fedora packaged libs
-rm net.sourceforge.phpeclipse.phpmanual.htmlparser/sax2.jar \
-   net.sourceforge.phpeclipse.phpmanual.htmlparser/htmllexer.jar \
-   net.sourceforge.phpeclipse.phpmanual.htmlparser/filterbuilder.jar \
-   net.sourceforge.phpeclipse.phpmanual.htmlparser/thumbelina.jar \
-   net.sourceforge.phpeclipse.phpmanual.htmlparser/junit.jar \
-   net.sourceforge.phpeclipse.phpmanual.htmlparser/htmlparser.jar
-build-jar-repository -s -p net.sourceforge.phpeclipse.phpmanual.htmlparser xml-commons-apis
+#rm net.sourceforge.phpeclipse.phpmanual.htmlparser/sax2.jar \
+#   net.sourceforge.phpeclipse.phpmanual.htmlparser/htmllexer.jar \
+#   net.sourceforge.phpeclipse.phpmanual.htmlparser/filterbuilder.jar \
+#   net.sourceforge.phpeclipse.phpmanual.htmlparser/thumbelina.jar \
+#   net.sourceforge.phpeclipse.phpmanual.htmlparser/junit.jar \
+#   net.sourceforge.phpeclipse.phpmanual.htmlparser/htmlparser.jar
+#build-jar-repository -s -p net.sourceforge.phpeclipse.phpmanual.htmlparser xml-commons-apis
 
 # this is done in a patch instead
 #grep -lR sax2 * | xargs sed --in-place "s/sax2/xml-commons-apis/"
@@ -116,10 +116,10 @@ unzip -q -d %{buildroot}%{install_loc}/phpeclipse-xdebug build/rpmBuild/net.sour
 
 # need to recreate the symlinks to libraries that were setup in "prep"
 # because for some reason the ant copy task doesn't preserve them
-pushd %{buildroot}%{install_loc}/phpeclipse/eclipse/plugins/net.sourceforge.phpeclipse.phpmanual.htmlparser_*
-rm *.jar
-build-jar-repository -s -p . xml-commons-apis
-popd
+#pushd %{buildroot}%{install_loc}/phpeclipse/eclipse/plugins/net.sourceforge.phpeclipse.phpmanual.htmlparser_*
+#rm *.jar
+#build-jar-repository -s -p . xml-commons-apis
+#popd
 
 %{gcj_compile}
 
