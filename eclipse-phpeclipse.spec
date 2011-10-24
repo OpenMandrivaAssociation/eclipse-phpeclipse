@@ -1,53 +1,55 @@
 %define eclipse_base     %{_libdir}/eclipse
-%define install_loc      %{_datadir}/eclipse/dropins
-%define gcj_support      0
+%define eclipse_dropin   %{_datadir}/eclipse/dropins
 
-Name:		eclipse-phpeclipse
-Version:	1.2.1
-Release:	%mkrel 0.2.0
-Summary:	PHP Eclipse plugin
+Name:      eclipse-phpeclipse
+Version:   1.2.3
+Release:   3
+Summary:   PHP Eclipse plugin
+Group:     Development/Java
+License:   CPL
+URL:       http://phpeclipse.net/
 
-Group:		Development/PHP
-License:	CPL
-URL:		http://phpeclipse.net/
+Source0:   http://downloads.sourceforge.net/project/phpeclipse/a%29%20Eclipse%203.3.x/PHPEclipse-1.2.3/PHPEclipse-1.2.3.200910091456PRD-src.zip
 
-# source tarball and the script used to generate it from upstream's source control
-# script usage:
-# $ sh get-phpeclipse.sh
-Source0:   phpeclipse-%{version}.tar.gz
-Source1:   get-phpeclipse.sh
-
+# Fix broken PHP table of contents links in the Eclipse help
 Patch0:    %{name}-broken-help-links.patch
+
+# Don't package hidden eclipse project files
 Patch1:    %{name}-fix-build-props.patch
+
+# Integrate properly with Fedora's apache (probably does not want to go upstream)
 Patch2:    %{name}-httpd-integration.patch
-Patch3:    %{name}-no-htmlparser.patch
+
+# Remove Windows specific preferences (probably does not want to go upstream)
 Patch4:    %{name}-rm-win32-help.patch
+
+# Fix a bug that passed the wrong file location to the external parser
 Patch5:    %{name}-external-parser.patch
+
+# Fix a bug that passed in the wrong URL to the browser
 Patch6:    %{name}-external-preview.patch
 
-BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root
+# Fix an exception that was causing the phpmanual not to show when you first open the PHP perspective
+Patch7:    %{name}-fix-phpmanual-view.patch
 
-BuildRequires:  eclipse-pde
-BuildRequires:  java-rpmbuild
-BuildRequires:  zip
-BuildRequires:  tomcat5-jsp-2.0-api
-%if %{gcj_support}
-BuildRequires:		gcc-java >= 0:4.0.2
-BuildRequires:		java-gcj-compat-devel >= 0:1.0.33
-%else
-BuildRequires:		java-devel >= 0:1.4.2
-%endif
+# Remove a reference that was causing a build failure on Eclipse 3.6+
+Patch8:    %{name}-remove-internal-eclipse-ref.patch
 
-%if %{gcj_support}
-ExclusiveArch:		%{ix86} x86_64 ppc ia64
-%else
-#BuildArch:		noarch
-%endif
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-Requires:		eclipse-platform >= 1:3.2.1
-Requires:		eclipse-pde-runtime
-Requires: 		php
-Requires:		apache
+BuildArch:        noarch
+
+BuildRequires:    java-devel
+BuildRequires:    jpackage-utils
+BuildRequires:    eclipse-pde >= 3.4
+BuildRequires:    htmlparser
+Requires:         java
+Requires:         jpackage-utils
+Requires:         eclipse-platform >= 3.4
+Requires:         htmlparser
+Requires:         php >= 5
+Requires:         php-pecl-xdebug
+Requires:         httpd
 
 %description
 PHPEclipse is an open source PHP IDE based on the Eclipse platform. Features
@@ -55,93 +57,59 @@ supported include syntax highlighting, content assist, PHP manual integration,
 templates and support for the XDebug and DBG debuggers.
 
 %prep
-%setup -q -n phpeclipse-%{version}
+%setup -q -c
 
 # apply patches
-%patch0 -p0
-%patch1 -p0
-%patch2 -p4
-%patch3 -p4
-%patch4 -p0
-%patch5 -p0
-%patch6 -p0
+%patch0 -p0 -b .orig
+%patch1 -p0 -b .orig
+%patch2 -p0 -b .orig
+%patch4 -p0 -b .orig
+%patch5 -p0 -b .orig
+%patch6 -p0 -b .orig
+%patch7 -p0 -b .orig
+%patch8 -p0 -b .orig
+
+#remove bundled jars
+find -name '*.class' -exec rm -f '{}' \;
+find -name '*.jar' -exec rm -f '{}' \;
 
 # ditch bundled libs in favor of building against fedora packaged libs
-#rm net.sourceforge.phpeclipse.phpmanual.htmlparser/sax2.jar \
-#   net.sourceforge.phpeclipse.phpmanual.htmlparser/htmllexer.jar \
-#   net.sourceforge.phpeclipse.phpmanual.htmlparser/filterbuilder.jar \
-#   net.sourceforge.phpeclipse.phpmanual.htmlparser/thumbelina.jar \
-#   net.sourceforge.phpeclipse.phpmanual.htmlparser/junit.jar \
-#   net.sourceforge.phpeclipse.phpmanual.htmlparser/htmlparser.jar
-#build-jar-repository -s -p net.sourceforge.phpeclipse.phpmanual.htmlparser xml-commons-apis
-
-# this is done in a patch instead
-#grep -lR sax2 * | xargs sed --in-place "s/sax2/xml-commons-apis/"
+pushd plugins
+build-jar-repository -s -p net.sourceforge.phpeclipse.phpmanual.htmlparser htmlparser
+popd
 
 # fix jar versions
 find -name MANIFEST.MF | xargs sed --in-place "s/0.0.0/%{version}/"
 
-# make sure upstream hasn't sneaked in any jars we don't know about
-JARS=""
-for j in `find -name "*.jar"`; do
-  if [ ! -L $j ]; then
-    JARS="$JARS $j"
-  fi
-done
-if [ ! -z "$JARS" ]; then
-   echo "These jars should be deleted and symlinked to system jars: $JARS"
-   exit 1
-fi
-
 %build
-mkdir home
-homedir=$(cd home > /dev/null & pwd)
 # build the main feature
-%{eclipse_base}/buildscripts/pdebuild -a -Duser.home=$homedir -D -f net.sourceforge.phpeclipse.feature
+%{eclipse_base}/buildscripts/pdebuild -f net.sourceforge.phpeclipse.feature
 
 # build the debug features
-%{eclipse_base}/buildscripts/pdebuild -a -Duser.home=$homedir -f net.sourceforge.phpeclipse.debug.feature
-%{eclipse_base}/buildscripts/pdebuild -a -Duser.home=$homedir -f net.sourceforge.phpeclipse.xdebug.feature
+%{eclipse_base}/buildscripts/pdebuild -f net.sourceforge.phpeclipse.debug.feature
+%{eclipse_base}/buildscripts/pdebuild -f net.sourceforge.phpeclipse.xdebug.feature
 
 %install
 rm -rf %{buildroot}
-install -d -m 755 %{buildroot}%{eclipse_base}
-install -d -m 755 %{buildroot}%{install_loc}
-install -d -m 755 %{buildroot}%{install_loc}/phpeclipse
-install -d -m 755 %{buildroot}%{install_loc}/phpeclipse-debug
-install -d -m 755 %{buildroot}%{install_loc}/phpeclipse-xdebug
-unzip -q -d %{buildroot}%{install_loc}/phpeclipse build/rpmBuild/net.sourceforge.phpeclipse.feature.zip
-unzip -q -d %{buildroot}%{install_loc}/phpeclipse-debug build/rpmBuild/net.sourceforge.phpeclipse.debug.feature.zip
-unzip -q -d %{buildroot}%{install_loc}/phpeclipse-xdebug build/rpmBuild/net.sourceforge.phpeclipse.xdebug.feature.zip
+install -d -m 755 %{buildroot}%{eclipse_dropin}
+unzip -q -d %{buildroot}%{eclipse_dropin}/phpeclipse        build/rpmBuild/net.sourceforge.phpeclipse.feature.zip
+unzip -q -d %{buildroot}%{eclipse_dropin}/phpeclipse-debug  build/rpmBuild/net.sourceforge.phpeclipse.debug.feature.zip
+unzip -q -d %{buildroot}%{eclipse_dropin}/phpeclipse-xdebug build/rpmBuild/net.sourceforge.phpeclipse.xdebug.feature.zip
 
 # need to recreate the symlinks to libraries that were setup in "prep"
 # because for some reason the ant copy task doesn't preserve them
-#pushd %{buildroot}%{install_loc}/phpeclipse/eclipse/plugins/net.sourceforge.phpeclipse.phpmanual.htmlparser_*
-#rm *.jar
-#build-jar-repository -s -p . xml-commons-apis
-#popd
-
-%{gcj_compile}
+pushd %{buildroot}%{eclipse_dropin}/phpeclipse/eclipse/plugins/net.sourceforge.phpeclipse.phpmanual.htmlparser_*
+rm *.jar
+build-jar-repository -s -p . htmlparser
+popd
 
 %clean
-rm -rf $RPM_BUILD_ROOT
-
-%if %{gcj_support}
-%post
-%{update_gcjdb}
-
-%postun
-%{clean_gcjdb}
-%endif
+rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root,-)
-# main feature
-%{install_loc}/phpeclipse/*
-
-# debug features
-%{install_loc}/phpeclipse-debug/*
-%{install_loc}/phpeclipse-xdebug/*
-%{gcj_files}
-
+%doc features/net.sourceforge.phpeclipse.feature/cpl-v10.html
+%{eclipse_dropin}/phpeclipse
+%{eclipse_dropin}/phpeclipse-debug
+%{eclipse_dropin}/phpeclipse-xdebug
 
