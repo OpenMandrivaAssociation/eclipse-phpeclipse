@@ -3,7 +3,7 @@
 
 Name:      eclipse-phpeclipse
 Version:   1.2.3
-Release:   3
+Release:   5
 Summary:   PHP Eclipse plugin
 Group:     Development/Java
 License:   CPL
