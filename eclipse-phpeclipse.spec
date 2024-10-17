@@ -7,7 +7,7 @@ Release:   5
 Summary:   PHP Eclipse plugin
 Group:     Development/Java
 License:   CPL
-URL:       http://phpeclipse.net/
+URL:       https://phpeclipse.net/
 
 Source0:   http://downloads.sourceforge.net/project/phpeclipse/a%29%20Eclipse%203.3.x/PHPEclipse-1.2.3/PHPEclipse-1.2.3.200910091456PRD-src.zip
 
